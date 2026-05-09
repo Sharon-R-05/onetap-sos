@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>OneTap SOS - Global Emergency App</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#ff0000">
+    <meta name="mobile-web-app-capable" content="yes">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background: #0a0a0a;
+            color: white;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 500px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .status-bar {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.6);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            z-index: 100;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 6px;
+        }
+
+        .status-dot.armed { background: #00c853; box-shadow: 0 0 5px #00c853; }
+        .status-dot.alert { background: #ff2d2d; animation: pulse 0.5s infinite; }
+        .status-dot.sending { background: #ffa500; animation: pulse 0.3s infinite; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .sos-btn {
+            width: 220px;
+            height: 220px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #ff2d2d, #cc0000);
+            border: 5px solid rgba(255,255,255,0.3);
+            color: white;
+            font-size: 36px;
+            font-weight: 900;
+            cursor: pointer;
+            margin: 20px auto;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 0 50px rgba(255,45,45,0.8);
+            transition: transform 0.1s;
+        }
+
+        .sos-btn:active {
+            transform: scale(0.97);
+        }
+
+        .sos-icon {
+            font-size: 60px;
+            margin-bottom: 10px;
+        }
+
+        .sos-text {
+            font-size: 28px;
+            letter-spacing: 5px;
+        }
+
+        .contacts-section {
+            background: #1e1e1e;
+            border-radius: 20px;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .contacts-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #333;
+        }
+
+        .contacts-header h3 {
+            font-size: 16px;
+            color: #ff8888;
+        }
+
+        .edit-contacts-btn {
+            background: #ff2d2d;
+            border: none;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .contact-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #333;
+        }
+
+        .contact-name {
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .contact-number {
+            font-size: 11px;
+            color: #888;
+            margin-top: 3px;
+        }
+
+        .contact-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .edit-contact, .delete-contact {
+            background: #333;
+            border: none;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+        .edit-contact { background: #2196f3; }
+        .delete-contact { background: #f44336; }
+
+        .add-contact-btn {
+            background: #25D366;
+            border: none;
+            color: white;
+            padding: 12px;
+            border-radius: 25px;
+            text-align: center;
+            cursor: pointer;
+            margin-top: 12px;
+            font-weight: bold;
+            font-size: 14px;
+            width: 100%;
+        }
+
+        .empty-contacts {
+            text-align: center;
+            padding: 30px 20px;
+            color: #888;
+            font-size: 13px;
+        }
+
+        .empty-add-btn {
+            background: #25D366;
+            border: none;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 30px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 15px;
+            width: 100%;
+        }
+
+        .global-badge {
+            background: #2196f3;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 10px;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
+
+        /* Install Prompt Banner */
+        .install-banner {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #25D366;
+            display: none;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 20px;
+            z-index: 3000;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+
+        .install-banner p {
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .install-banner button {
+            background: white;
+            color: #25D366;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 25px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .countdown {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.95);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .countdown-num {
+            font-size: 150px;
+            font-weight: 900;
+            color: #ff2d2d;
+            text-shadow: 0 0 20px red;
+        }
+
+        .cancel-btn {
+            margin-top: 40px;
+            padding: 15px 40px;
+            background: #333;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .alert-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #ff0000;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            animation: flash 0.3s infinite;
+            text-align: center;
+        }
+
+        @keyframes flash {
+            0%, 100% { background: #ff0000; }
+            50% { background: #aa0000; }
+        }
+
+        .alert-icon {
+            font-size: 80px;
+            margin-bottom: 15px;
+        }
+
+        .alert-title {
+            font-size: 40px;
+            font-weight: 900;
+            margin-bottom: 15px;
+        }
+
+        .alert-location {
+            font-size: 14px;
+            background: rgba(0,0,0,0.5);
+            padding: 12px;
+            border-radius: 15px;
+            margin: 15px;
+            max-width: 90%;
+            word-break: break-all;
+        }
+
+        .dismiss-btn {
+            padding: 12px 35px;
+            background: white;
+            color: #ff0000;
+            border: none;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .sending-indicator {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-size: 11px;
+            display: none;
+            z-index: 3000;
+        }
+
+        .footer {
+            text-align: center;
+            font-size: 10px;
+            color: #555;
+            margin-top: 10px;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="global-badge">🌍 ONETAP SOS - GLOBAL</div>
+    
+    <div class="sos-btn" id="sosBtn">
+        <div class="sos-icon">🆘</div>
+        <div class="sos-text">SOS</div>
+    </div>
+
+    <div class="contacts-section">
+        <div class="contacts-header">
+            <h3>📞 EMERGENCY CONTACTS</h3>
+            <button class="edit-contacts-btn" id="editMainBtn">✏️ Manage</button>
+        </div>
+        <div id="contactsList"></div>
+    </div>
+
+    <div class="footer">🌍 Tap SOS → 2 sec → WhatsApp opens worldwide</div>
+</div>
+
+<!-- Install Banner -->
+<div class="install-banner" id="installBanner">
+    <p>📱 Install OneTap SOS on your phone</p>
+    <button id="installBtn">Install Now</button>
+</div>
+
+<div class="status-bar">
+    <span class="status-dot armed" id="statusDot"></span>
+    <span id="statusText">READY</span>
+</div>
+
+<div class="sending-indicator" id="sendingIndicator">
+    📤 Sending emergency alerts...
+</div>
+
+<div class="countdown" id="countdownOverlay">
+    <div class="countdown-num" id="countdownNum">2</div>
+    <div style="color: white; margin-bottom: 20px;">EMERGENCY IN...</div>
+    <button class="cancel-btn" id="cancelBtn">CANCEL</button>
+</div>
+
+<div class="alert-overlay" id="alertOverlay">
+    <div class="alert-icon">🚨🚨🚨</div>
+    <div class="alert-title">EMERGENCY!</div>
+    <div class="alert-location" id="alertLocation">Sending your location...</div>
+    <button class="dismiss-btn" id="dismissBtn">DISMISS</button>
+</div>
+
+<script>
+    // ========== INSTALL PROMPT ==========
+    let deferredPrompt;
+    let installBanner = document.getElementById('installBanner');
+    let installBtn = document.getElementById('installBtn');
+
+    // Listen for beforeinstallprompt event
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        // Show the install banner
+        installBanner.style.display = 'flex';
+    });
+
+    // Handle install button click
+    installBtn.addEventListener('click', async () => {
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            console.log(`User ${outcome}`);
+            deferredPrompt = null;
+            installBanner.style.display = 'none';
+        }
+    });
+
+    // Hide banner if app is already installed
+    window.addEventListener('appinstalled', () => {
+        installBanner.style.display = 'none';
+        console.log('App was installed');
+    });
+
+    // ========== CONFIGURATION ==========
+    const COUNTDOWN_SECONDS = 2;
+    
+    let emergencyContacts = [];
+    let editMode = false;
+    let currentLocation = null;
+    
+    let state = {
+        armed: true,
+        countingDown: false,
+        countdownTimer: null,
+        audioCtx: null,
+        soundActive: false,
+        sirenTimer: null,
+        flashInterval: null
+    };
+    
+    // DOM Elements
+    const sosBtn = document.getElementById('sosBtn');
+    const countdownOverlay = document.getElementById('countdownOverlay');
+    const countdownNum = document.getElementById('countdownNum');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const alertOverlay = document.getElementById('alertOverlay');
+    const alertLocation = document.getElementById('alertLocation');
+    const dismissBtn = document.getElementById('dismissBtn');
+    const statusDot = document.getElementById('statusDot');
+    const statusText = document.getElementById('statusText');
+    const sendingIndicator = document.getElementById('sendingIndicator');
+    const contactsListDiv = document.getElementById('contactsList');
+    const editMainBtn = document.getElementById('editMainBtn');
+    
+    // ========== AUTO-FETCH LOCATION ==========
+    async function fetchLocation() {
+        return new Promise((resolve) => {
+            if (!navigator.geolocation) {
+                currentLocation = "Location not supported";
+                resolve(currentLocation);
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(
+                (pos) => {
+                    currentLocation = `${pos.coords.latitude.toFixed(4)},${pos.coords.longitude.toFixed(4)}`;
+                    console.log("📍 Location auto-fetched:", currentLocation);
+                    resolve(currentLocation);
+                },
+                (error) => {
+                    console.log("Location error:", error.message);
+                    currentLocation = "Location unavailable";
+                    resolve(currentLocation);
+                },
+                { enableHighAccuracy: true, timeout: 10000 }
+            );
+        });
+    }
+    
+    function startAutoLocationFetch() {
+        fetchLocation();
+        setInterval(() => {
+            fetchLocation();
+        }, 30000);
+    }
+    
+    // ========== ADD CONTACT FUNCTION ==========
+    function addNewContact() {
+        let name = prompt("🔴 ADD EMERGENCY CONTACT\n\nEnter contact name:", "");
+        if (!name || name.trim() === "") return false;
+        
+        let number = prompt(`📱 Enter ${name.trim()}'s WhatsApp number\n\nInclude country code!\nExamples:\n🇮🇳 India: +91 9876543210\n🇺🇸 USA: +1 2345678900\n🇬🇧 UK: +44 7700123456`, "");
+        if (!number || number.trim() === "") return false;
+        
+        let cleanNumber = number.replace(/[\s\-\(\)]/g, '');
+        emergencyContacts.push({ name: name.trim(), number: cleanNumber });
+        saveContacts();
+        renderContacts();
+        
+        alert(`✅ ${name} added successfully!`);
+        return true;
+    }
+    
+    // ========== FIRST TIME SETUP ==========
+    async function firstTimeSetup() {
+        const isSetupDone = localStorage.getItem('onetapsos_setup_complete');
+        
+        if (isSetupDone === 'true') {
+            loadContacts();
+            return;
+        }
+        
+        alert("🌍 WELCOME TO ONETAP SOS!\n\nThis app helps you send emergency alerts to your trusted contacts via WhatsApp.\n\nLet's set up your emergency contacts now.");
+        
+        let hasContacts = false;
+        while (!hasContacts) {
+            let name = prompt("🔴 ADD EMERGENCY CONTACT\n\nEnter contact name:", "");
+            
+            if (!name || name.trim() === "") {
+                if (emergencyContacts.length === 0) {
+                    alert("⚠️ You must add at least one emergency contact!\n\nPlease add a contact to continue.");
+                    continue;
+                }
+                hasContacts = true;
+                break;
+            }
+            
+            let number = prompt(`📱 Enter ${name.trim()}'s WhatsApp number\n\nInclude country code!\nExamples:\n🇮🇳 India: +91 9876543210\n🇺🇸 USA: +1 2345678900\n🇬🇧 UK: +44 7700123456`, "");
+            
+            if (!number || number.trim() === "") {
+                let retry = confirm(`Skip adding ${name}?`);
+                if (retry) continue;
+                else continue;
+            }
+            
+            let cleanNumber = number.replace(/[\s\-\(\)]/g, '');
+            emergencyContacts.push({ name: name.trim(), number: cleanNumber });
+            
+            let more = confirm(`✅ ${name} added successfully!\n\nDo you want to add another emergency contact?`);
+            if (!more) {
+                hasContacts = true;
+            }
+        }
+        
+        if (emergencyContacts.length === 0) {
+            alert("⚠️ Please add at least one emergency contact to use the app.");
+            firstTimeSetup();
+            return;
+        }
+        
+        saveContacts();
+        localStorage.setItem('onetapsos_setup_complete', 'true');
+        
+        alert("📍 One more step!\n\nAllow location access when prompted.\nYour location will be shared with your emergency contacts when you press SOS.");
+        await fetchLocation();
+        
+        alert("✅ SETUP COMPLETE!\n\nYour emergency contacts are saved.\n\nTap the RED SOS button in any emergency!\n\nWhatsApp will open automatically with your location.");
+        
+        renderContacts();
+    }
+    
+    // ========== CONTACT MANAGEMENT ==========
+    function renderContacts() {
+        if (emergencyContacts.length === 0) {
+            contactsListDiv.innerHTML = `
+                <div class="empty-contacts">
+                    ⚠️ No emergency contacts added yet<br><br>
+                    <button class="empty-add-btn" id="emptyAddBtn">➕ ADD EMERGENCY CONTACT</button>
+                </div>
+            `;
+            
+            const emptyAddBtn = document.getElementById('emptyAddBtn');
+            if (emptyAddBtn) {
+                emptyAddBtn.onclick = () => {
+                    addNewContact();
+                };
+            }
+            return;
+        }
+        
+        let html = '';
+        for (let i = 0; i < emergencyContacts.length; i++) {
+            const c = emergencyContacts[i];
+            if (editMode) {
+                html += `
+                    <div class="contact-item">
+                        <div>
+                            <div class="contact-name">${escapeHtml(c.name)}</div>
+                            <div class="contact-number">${escapeHtml(formatPhoneNumber(c.number))}</div>
+                        </div>
+                        <div class="contact-actions">
+                            <button class="edit-contact" onclick="editContact(${i})">✏️ Edit</button>
+                            <button class="delete-contact" onclick="deleteContact(${i})">🗑️ Delete</button>
+                        </div>
+                    </div>
+                `;
+            } else {
+                html += `
+                    <div class="contact-item">
+                        <div>
+                            <div class="contact-name">${escapeHtml(c.name)}</div>
+                            <div class="contact-number">${escapeHtml(formatPhoneNumber(c.number))}</div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
+        if (editMode) {
+            html += `<button class="add-contact-btn" id="inlineAddBtn">+ Add Emergency Contact</button>`;
+        }
+        
+        contactsListDiv.innerHTML = html;
+        
+        const inlineAddBtn = document.getElementById('inlineAddBtn');
+        if (inlineAddBtn) {
+            inlineAddBtn.onclick = () => {
+                addNewContact();
+            };
+        }
+    }
+    
+    function formatPhoneNumber(number) {
+        let clean = number.replace(/[^0-9]/g, '');
+        if (clean.length > 10) {
+            let country = clean.slice(0, -10);
+            let local = clean.slice(-10);
+            return `+${country} ${local.slice(0,5)}-${local.slice(5)}`;
+        }
+        return number;
+    }
+    
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+    
+    function toggleEditMode() {
+        editMode = !editMode;
+        editMainBtn.textContent = editMode ? '✓ Done' : '✏️ Manage';
+        editMainBtn.style.background = editMode ? '#00c853' : '#ff2d2d';
+        renderContacts();
+    }
+    
+    function editContact(index) {
+        let contact = emergencyContacts[index];
+        let newName = prompt("Edit contact name:", contact.name);
+        if (!newName || newName.trim() === "") return;
+        
+        let newNumber = prompt("Edit WhatsApp number (with country code):", contact.number);
+        if (!newNumber || newNumber.trim() === "") return;
+        
+        let cleanNumber = newNumber.replace(/[\s\-\(\)]/g, '');
+        emergencyContacts[index] = { name: newName.trim(), number: cleanNumber };
+        saveContacts();
+        renderContacts();
+        alert(`✅ Contact updated!`);
+    }
+    
+    function deleteContact(index) {
+        let contactName = emergencyContacts[index].name;
+        if (confirm(`Remove ${contactName} from emergency contacts?`)) {
+            emergencyContacts.splice(index, 1);
+            saveContacts();
+            renderContacts();
+            
+            if (emergencyContacts.length === 0) {
+                editMode = false;
+                editMainBtn.textContent = '✏️ Manage';
+                editMainBtn.style.background = '#ff2d2d';
+                localStorage.removeItem('onetapsos_setup_complete');
+            }
+            
+            alert(`✅ ${contactName} removed.`);
+        }
+    }
+    
+    function loadContacts() {
+        const saved = localStorage.getItem('emergencyContacts');
+        if (saved) {
+            emergencyContacts = JSON.parse(saved);
+        }
+        renderContacts();
+    }
+    
+    function saveContacts() {
+        localStorage.setItem('emergencyContacts', JSON.stringify(emergencyContacts));
+    }
+    
+    // ========== WHATSAPP SEND ==========
+    async function sendToWhatsApp(number, message) {
+        let cleanNumber = number.replace(/[^0-9]/g, '');
+        let url = `https://wa.me/${cleanNumber}?text=${encodeURIComponent(message)}`;
+        window.open(url, '_blank');
+        await new Promise(r => setTimeout(r, 600));
+        return true;
+    }
+    
+    async function sendEmergencyMessage() {
+        let location = currentLocation;
+        if (!location) {
+            await fetchLocation();
+            location = currentLocation || "Location unavailable";
+        }
+        
+        let mapLink = `https://maps.google.com/?q=${location}`;
+        let timestamp = new Date().toLocaleString();
+        
+        let message = `🚨 ONETAP SOS - EMERGENCY! 🚨\n\n📍 Location: ${location}\n🗺️ Maps: ${mapLink}\n⏰ Time: ${timestamp}\n\nI NEED HELP IMMEDIATELY! Please share my location with emergency services.\n\n🌍 This is an automated alert from OneTap SOS.`;
+        
+        if (emergencyContacts.length === 0) {
+            alert("⚠️ No emergency contacts added!\n\nClick 'Manage' then 'Add Emergency Contact' to add contacts.");
+            return { location, sentCount: 0 };
+        }
+        
+        sendingIndicator.style.display = 'block';
+        
+        for (let i = 0; i < emergencyContacts.length; i++) {
+            await sendToWhatsApp(emergencyContacts[i].number, message);
+        }
+        
+        setTimeout(() => {
+            sendingIndicator.style.display = 'none';
+        }, 2000);
+        
+        return { location, sentCount: emergencyContacts.length };
+    }
+    
+    // ========== AUDIO & ALERTS ==========
+    function initAudio() {
+        if (!state.audioCtx) {
+            state.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (state.audioCtx && state.audioCtx.state === 'suspended') {
+            state.audioCtx.resume();
+        }
+    }
+    
+    function playSiren() {
+        if (!state.audioCtx) initAudio();
+        if (!state.audioCtx) return;
+        
+        state.soundActive = true;
+        
+        function playTone(freq, duration, delay) {
+            if (!state.soundActive) return;
+            setTimeout(() => {
+                if (!state.soundActive) return;
+                try {
+                    let osc = state.audioCtx.createOscillator();
+                    let gain = state.audioCtx.createGain();
+                    osc.connect(gain);
+                    gain.connect(state.audioCtx.destination);
+                    osc.frequency.value = freq;
+                    gain.gain.value = 0.4;
+                    osc.start();
+                    gain.gain.exponentialRampToValueAtTime(0.0001, state.audioCtx.currentTime + duration);
+                    osc.stop(state.audioCtx.currentTime + duration);
+                } catch(e) {}
+            }, delay);
+        }
+        
+        function loop() {
+            if (!state.soundActive) return;
+            playTone(880, 0.4, 0);
+            playTone(660, 0.4, 400);
+            playTone(880, 0.4, 800);
+            playTone(520, 0.6, 1200);
+            state.sirenTimer = setTimeout(loop, 1800);
+        }
+        loop();
+    }
+    
+    function stopSound() {
+        state.soundActive = false;
+        if (state.sirenTimer) clearTimeout(state.sirenTimer);
+    }
+    
+    function startScreenFlash() {
+        let count = 0;
+        state.flashInterval = setInterval(() => {
+            document.body.style.backgroundColor = count % 2 === 0 ? '#ff0000' : '#0a0a0a';
+            count++;
+            if (count > 20) {
+                clearInterval(state.flashInterval);
+                document.body.style.backgroundColor = '';
+            }
+        }, 300);
+    }
+    
+    // ========== SOS TRIGGER ==========
+    async function triggerSOS() {
+        countdownOverlay.style.display = 'none';
+        state.armed = false;
+        
+        statusDot.className = 'status-dot sending';
+        statusText.textContent = 'SENDING...';
+        
+        const result = await sendEmergencyMessage();
+        
+        alertLocation.innerHTML = `✅ EMERGENCY ALERT SENT! ✅<br><br>📍 Location: ${result.location}<br><br>📱 Alert sent to ${result.sentCount} contact(s)<br><br>🌍 WhatsApp opened. Tap SEND!`;
+        alertOverlay.style.display = 'flex';
+        
+        playSiren();
+        startScreenFlash();
+        
+        if (navigator.vibrate) {
+            navigator.vibrate([500, 200, 500, 200, 1000]);
+        }
+    }
+    
+    function startCountdown() {
+        if (!state.armed) return;
+        
+        if (emergencyContacts.length === 0) {
+            alert("⚠️ No emergency contacts added!\n\nClick '➕ ADD EMERGENCY CONTACT' to add your first contact.");
+            return;
+        }
+        
+        initAudio();
+        
+        let seconds = COUNTDOWN_SECONDS;
+        countdownNum.textContent = seconds;
+        countdownOverlay.style.display = 'flex';
+        state.armed = false;
+        state.countingDown = true;
+        
+        statusDot.className = 'status-dot alert';
+        statusText.textContent = 'ALERTING';
+        
+        state.countdownTimer = setInterval(() => {
+            seconds--;
+            countdownNum.textContent = seconds;
+            if (seconds <= 0) {
+                clearInterval(state.countdownTimer);
+                state.countingDown = false;
+                triggerSOS();
+            }
+        }, 1000);
+    }
+    
+    function cancelCountdown() {
+        if (state.countdownTimer) clearInterval(state.countdownTimer);
+        countdownOverlay.style.display = 'none';
+        state.armed = true;
+        state.countingDown = false;
+        statusDot.className = 'status-dot armed';
+        statusText.textContent = 'READY';
+    }
+    
+    function dismissAlert() {
+        stopSound();
+        if (state.flashInterval) clearInterval(state.flashInterval);
+        alertOverlay.style.display = 'none';
+        document.body.style.backgroundColor = '';
+        state.armed = true;
+        statusDot.className = 'status-dot armed';
+        statusText.textContent = 'READY';
+    }
+    
+    // ========== INITIALIZE ==========
+    async function init() {
+        await firstTimeSetup();
+        await fetchLocation();
+        startAutoLocationFetch();
+        
+        document.body.addEventListener('touchstart', function once() {
+            initAudio();
+            document.body.removeEventListener('touchstart', once);
+        });
+    }
+    
+    // Event Listeners
+    sosBtn.addEventListener('click', startCountdown);
+    cancelBtn.addEventListener('click', cancelCountdown);
+    dismissBtn.addEventListener('click', dismissAlert);
+    editMainBtn.addEventListener('click', toggleEditMode);
+    
+    init();
+    
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').catch(e => console.log("SW not available"));
+    }
+</script>
+</body>
+</html>
